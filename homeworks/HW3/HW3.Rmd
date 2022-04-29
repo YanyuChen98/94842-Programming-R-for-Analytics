@@ -1,0 +1,220 @@
+---
+title: "Homework 3"
+author: "Yanyu Chen"
+date: 'Assigned: 11/03/2021'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: paper
+    highlight: tango
+---
+
+### To complete this assignment, follow these steps:
+
+1. Download the `HW3.Rmd` file from Canvas or the course website.
+2. Open `HW3.Rmd` in RStudio.
+3. Replace the "Your Name Here" text in the `author:` field with your own name.
+4. Supply your solutions to the homework by editing `HW3.Rmd`.
+5. When you have completed the homework and have **checked** that your code both runs in the Console and knits correctly when you click `Knit HTML`, save the html file named with your Andrew ID, and submit on Canvas.
+
+### Problem 1: table(), tapply()
+
+We'll start by downloading a publicly available dataset that contains some census data information.  This dataset is called `income` and is available on Canvas in the files section.
+
+```{r question 1}
+# Import data file
+
+income <- read.csv("D:/Heinz/R Analytics/HW3/income_data.csv", stringsAsFactors=TRUE)
+# Edit me to import the datafile named "income_data.csv" on Canvas using read.csv (hint you can used Import Dataset in the Console to provide the code)
+
+# Give the variables names
+colnames(income) <- c("age", "workclass", "fnlwgt", "education", "education.years", "marital.status", "occupation", "relationship", "race", "sex", "capital.gain", "capital.loss", "hours.per.week", "native.country", "income.bracket")
+```
+
+##### (a) table()
+
+Use the `table()` function to produce a contingency table of observation counts across **marital.status** and **sex**.
+
+```{r question 1a}
+table_marital_sex <- table(income$marital.status, income$sex)
+table_marital_sex
+```
+
+##### (b)  The `prop.table()` function calculates a table of proportions from a table of counts.  Read the documentation for this function to see how it works.  Use `prop.table()` and your table from problem **(a)** to form a (column) proportions table.  The Female column of the table should show the proportion of women in each marital status category.  The Male column will show the same, but for men.
+
+
+```{r question 1b}
+table_marital_sex_prop <- prop.table(table_marital_sex, 2)
+table_marital_sex_prop
+```
+
+##### (c)  Use part (b) to answer the following questions.    In this data set, are women more or less likely than men to be married?  Are women more or less likely to be Widowed?  (As part of your answer, calculate the % of individuals in each group who report being married, and the % who report being widowed.  Use inline code chunks when reporting these values.)
+
+<font color="#157515"><b>
+
+No, women are no more likely than man to be married in this data set, because the probability of women being married `r round(sum(table_marital_sex_prop[2:4,1]), 4)*100`% is smaller than the probability of men being married `r round(sum(table_marital_sex_prop[2:4,2]), 4)*100`%.
+
+Yes, women are more likely to be widowed in this data set, because the probability of women being widowed `r round(sum(table_marital_sex_prop[7,1]), 4)*100`% is smaller than the probability of men being widowed `r round(sum(table_marital_sex_prop[7,2]), 4)*100`%.
+
+</font></b>
+
+##### (d) tapply()
+
+Use the `tapply()` function to produce a table showing the average **education** (in years) across **marital status** and **sex** categories.
+
+```{r question 1d}
+tapply(income$education.years, list(income$marital.status, income$sex), mean)
+```
+
+### Problem 2: A more complex `tapply()` example (calculating Claims per Holder)
+
+The `MASS` package contains a dataset called Insurance.  Read the help file on this data set to understand its contents.
+
+#####(a) Total number of Holders by District and Age
+
+Use the `tapply()` function to produce a table showing the total number of Holders across District and Age.  Save this table in a variable, and also display your answer.
+
+```{r question 2a}
+library(MASS)
+Insurance_holder_numbers <- tapply(Insurance$Holders, list(Insurance$District, Insurance$Age), sum)
+Insurance_holder_numbers
+```
+
+#####(b) Total number of Claims by District and Age
+
+Use the `tapply()` function to produce a table showing the total number of Claims across District and Age  Save this table in a variable, and also display your answer.
+
+```{r question 2b}
+Insurance_claim_numbers <- tapply(Insurance$Claims, list(Insurance$District, Insurance$Age), sum)
+Insurance_claim_numbers
+
+```
+
+#####(c) Rate of Claims per Holder by District and Age
+
+Use your answers from parts **(a)** and **(b)** to produce a table that shows the rate of Claims per Holder across District and Age. 
+
+```{r question 2c}
+Insurance_claims_per_holder <- Insurance_claim_numbers / Insurance_holder_numbers
+Insurance_claims_per_holder
+```
+
+Tip: *If an insurance company has 120,000 policy holders and receives 14,000 claims, the rate of claims per holder is 14000/120000 = `r round(14000/120000,3) `*
+
+#####(d) Do you observe any trends in how the number of claims per holder varies with age?  
+
+<font color="#157515"><b>
+
+I find that with the age increasing, the number of claims per holder generally decreases.
+
+</font></b>
+
+### Problem 3: Someone left strings in your numeric column!
+
+This exercise will give you practice with two of the most common data cleaning tasks.  For this problem we'll use the `survey_untidy.csv` data set posted on the course Canvas site.  Begin by importing this data into R.  The dataset is on Canvas.
+
+```{r question 3}
+# Edit me to import the datafile named "survey_untidy.csv" on Canvas using a read.csv function (hint you can used Import Dataset in the Console to provide the code)
+
+survey_untidy <- read.csv("D:/Heinz/R Analytics/HW3/survey_untidy.csv", stringsAsFactors=FALSE)
+survey_untidy
+```
+##### (a) TV Hours column
+
+Note the format of the TVhours column. Use the `as.numeric()` command to coerce the TVhours vector to numeric values (check the help section is you are unclear about the syntax). HINT - You need to pre-process some of the values manually first.
+
+```{r question 3a}
+library(tidyverse)
+
+survey_untidy$TVhours[survey_untidy$TVhours == 'zero' | survey_untidy$TVhours == 'none'] <- 0
+survey_untidy$TVhours[5] <- 20
+survey_untidy$TVhours <- str_remove_all(survey_untidy$TVhours, '[a-zA-Z]+')
+survey_untidy$TVhours <- as.numeric(survey_untidy$TVhours)
+survey_untidy$TVhours
+```
+
+### Problem 4: Shouldn't ppm, pPM and PPM all be the same thing?
+
+This exercise picks up from Problem 3, and walks you through two different approaches to cleaning up the Program column
+
+##### (a) Identifying the problem.
+
+Use the `table` or `levels` command on the Program column to figure out what went wrong with this column.  Describe the problem in the space below.
+
+```{r question 4a}
+table(survey_untidy$Program)
+```
+
+**Description of the problem:**
+<font color="#157515"><b>
+
+There seem to be several different programs but in fact many of them are the same. For example, 'MIsM' and 'MISM', 'ppm', 'ppM', 'PPm' and 'PPM'. The difference is just the letter case.
+
+</font></b>
+
+##### (b) `toupper` approach
+
+The `toupper` function takes an array of character strings and converts all letters to uppercase.
+
+Use `toupper()` and `mutate` to perform the same data cleaning task as in part (b).  
+
+```{r question 4b}
+survey_toupper <- survey_untidy
+survey_toupper$Program <- toupper(survey_untidy$Program)
+table(survey_toupper$Program)
+
+survey <- mutate(survey_untidy, Program = toupper(Program))
+table(survey$Program)
+```
+
+**Tip**: *The `toupper()` and `tolower()` functions are very useful in data cleaning tasks.  You may want to start by running these functions even if you'll have to do some more spot-cleaning later on.*
+
+### Problem 5: Let's write a function
+
+##### (a) Writing trimmed mean function
+
+Write a function that calculates the mean of a numeric vector `x`, ignoring the `s` smallest and `l` largest values (this is a *trimmed mean*).  
+
+E.g., if `x = c(1, 7, 3, 2, 5, 0.5, 9, 10)`, `s = 1`, and `l = 2`, your function would return the mean of `c(1, 7, 3, 2, 5)` (this is `x` with the 1 smallest value (0.5) and the 2 largest values (9, 10) removed).
+
+Your function should use the `length()` function to check if `x` has at least `s + l + 1` values.  If `x` is shorter than `s + l + 1`, your function should use the `message()` function to tell the user that the vector can't be trimmed as requested.  If `x` is at least length `s + l + 1`, your function should return the trimmed mean.
+
+```{r question 5a}
+# Here's a function skeleton to get you started
+
+# Fill me in with an informative comment
+# describing what the function does
+trimmedMean <- function(x, s = 0, l = 0) {
+  if (length(x) < s + l + 1) {
+    message('This vector can\'t be trimmed as requested.')
+  } else {
+    mean(sort(x)[(1+s):(length(x)-l)])
+  }
+}
+```
+
+##### (b) Writing a conversion function
+
+You work for a company that uses both English and metric measurements. Write a function with 2 arguments, the first value in inches and the second value in meters (both positive values, lengths cannot be negative). Compare these values to determine if they are equal (return a boolean TRUE or FALSE). It might be useful to convert both arguments to centimeters (or the unit of your choice) and compare them. For youre reference, 1 inch = 2.54 cm EXACTLY. There are 100 centimeters in a meter.
+
+Write your function and then pass in the following sets of values:
+(36, 1)
+(50, 1.27)
+(60, 1.6)
+(x, y) a final pair of values, other than zero, that will evaulate to TRUE.
+
+``` {r question 5b}
+Compare_values <- function(inch, meter) {
+  inch_cm <- inch * 2.54
+  meter_cm <- meter * 100
+  inch_cm == meter_cm
+}
+
+Compare_values(36, 1)
+Compare_values(50, 1.27)
+Compare_values(60, 1.6)
+Compare_values(100, 2.54)
+```
+
+Please complete, save your script and knit your homework as html output, be sure your name is in the YAML header, and submit the html on Canvas with your AndrewID in the file name.

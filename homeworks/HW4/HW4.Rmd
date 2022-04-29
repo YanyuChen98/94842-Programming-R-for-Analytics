@@ -1,0 +1,212 @@
+---
+title: "Homework 4"
+author: "Yanyu Chen"
+date: 'Assigned: 11/10/2021'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: paper
+    highlight: tango
+---
+
+### This homework is due before next class.  To complete this assignment, follow these steps:
+
+1. Download the `homework4.Rmd` file from Canvas or the course website.
+2. Open `homework4.Rmd` in RStudio.
+3. Replace the "Your Name Here" text in the `author:` field with your own name.
+4. Supply your solutions to the homework by editing `homework4.Rmd`.
+5. When you have completed the homework and have **checked** that your code both runs in the Console and knits correctly when you click `Knit HTML`, save the file as `HW4_yourandrewid.html`, and submit it on Canvas  
+
+### Loading packages
+
+The code chunk below appears in the Rmd file, but won't be displayed in your html output.  
+
+```{r, include = FALSE}
+library(MASS)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+### Problem 1: A few simple plots
+
+For this problem we'll use the `diamonds` dataset from the `ggplot2` package.
+
+##### (a) Base R graphics
+
+Use the `hist` function to create a histogram of `carat` with bars colored `steelblue`. 
+
+```{r question 1a}
+diamond_hist_carat <- hist(diamonds$carat, col = 'steelblue')
+```
+
+##### (b) qplot histogram
+
+Use the `qplot` function from the `ggplot2` package to create a histogram of `depth`.  Note that `geom = "histogram"` is a valid geometry in `qplot`.  
+
+```{r question 1b}
+diamond_hist_depth <- qplot(diamonds$depth, binwidth=0.2, geom='histogram')
+diamond_hist_depth
+```
+
+##### (c) qplot violin plots
+
+Use the `qplot` function from the `ggplot2` library to create violin plots showing how `price` varies across diamond `cut`.  Specify `fill = cut` to get all the boxplots to be colored differently.
+
+```{r question 1c}
+diamond_violin_price <- qplot(price, cut, data=diamonds, fill=cut, geom='violin')
+diamond_violin_price
+```
+
+**Hint**: For this exercise, it will be useful to know that `violin` is a geometry (`geom`) built into `ggplot2`, and that `qplot` can be called with the arguments:
+
+```{r qqplot, eval = FALSE}
+qplot(x, y, data, geom, fill)
+```
+
+### Problem 2: ggplot practice 
+
+For this exercise we'll go back to the Cars93 data set in the MASS library
+
+##### (a) size mapping, geom_point()
+
+Define a `ggplot` object using the Cars93 data set that you can use to view `Price` on the y-axis, `MPG.highway` on the x-axis, and set the `size` mapping to be based on `Horsepower`.  
+
+Use `geom_point()` to create a scatterplot from your `ggplot` object.
+
+```{r question 2a}
+cars93_scatter <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower)) + geom_point()
+cars93_scatter
+```
+
+##### (b) color mapping
+
+Repeat part (a), this time also setting the `color` mapping to be based on `Origin`.
+
+```{r question 2b}
+cars93_scatter_2b <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower, color=Origin)) + geom_point()
+cars93_scatter_2b
+```
+
+##### (c) changing color palette
+
+Repeat part (b), this time using the `scale_color_manual()` layer to specify that you want to use `cbPalette` as your color palette.
+
+```{r queston 2c}
+cbPalette <- c("gray", "orange")
+cars93_scatter_2c <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower, color=Origin)) + geom_point() + scale_color_manual(values=cbPalette)
+cars93_scatter_2c
+```
+
+
+### Problem 3: More ggplot2 practice
+
+#####(a) stat_smooth()
+
+Repeat part 2(b), this time using `stat_smooth()` to add a layer showing the smoothed curve representing how `Price` varies with `MPG.highway`.  
+
+```{r question 3a}
+cars93_scatter_3a <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower, color=Origin)) + geom_point() + stat_smooth()
+cars93_scatter_3a
+```
+
+#####(b) facet_grid() 
+
+Use your ggplot object from 2(b) along with the `geom_point()` and `facet_grid` layers to create scatterplots of `Price` against `MPG.highway`, broken down by (conditioned on) `Origin`.  
+
+```{r question 3b}
+cars93_scatter_3b <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower, color=Origin)) + geom_point() + facet_grid(~Origin)
+cars93_scatter_3b
+```
+
+(Your code should produce a figure with two scatterplots, analogous to the `facet_wrap` example from class.)
+
+#####(c) Overlaying regression lines.
+
+Modify your solution to part (b) to also display regression lines for each scatterplot.
+
+```{r question 3c}
+cars93_scatter_3c <- ggplot(data=Cars93, aes(MPG.highway, Price, size=Horsepower, color=Origin)) + geom_point() + facet_grid(~Origin) + stat_smooth()
+cars93_scatter_3c
+```
+
+
+### Problem 4: ddply() practice
+
+This problem uses the Adult dataset, which we load below.  The main variable of interest here is `high.income`, which indicates whether the individual's income was over $50K.  Anyone for whom `high.income == 1` is considered a "high earner".
+
+```{r question 4}
+adult.data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data", header=FALSE, fill=FALSE, strip.white=T,
+                 col.names=c("age", "type_employer", "fnlwgt", "education", 
+                "education_num","marital", "occupation", "relationship", "race","sex",
+                "capital_gain", "capital_loss", "hr_per_week","country", "income"))
+adult.data <- mutate(adult.data,
+                     high.income = as.numeric(income == ">50K"))
+```
+
+##### (a) Income by education level
+
+Use the `ddply()` function to produce a summary table showing how many individuals there are in each `education_num` bin, and how the proportion of high earners varies across `education_num` levels.  Your table should have column names: `education_num`, `count` and `high.earn.rate`.  
+
+```{r question 4a}
+table_high.earn <- ddply(adult.data, .(education_num), summarise, 
+      count = length(education_num),
+      high.earn.rate = sum(high.income == 1) / length(education_num))
+table_high.earn
+```
+
+##### (b) Constructing a bar chart
+
+Using the `ggplot` and `geom_bar` commands along with your data summary from part **(a)** to create a bar chart showing the high earning rate on the y axis and `education_num` on the x axis.  Specify that the color of the bars should be determined by the number of individuals in each bin.
+
+```{r question 4b}
+plot_table_high.earn <- ggplot(data=table_high.earn, aes(x=education_num, y=high.earn.rate, fill=count)) + geom_histogram(stat='identity')
+plot_table_high.earn
+```
+
+##### (c) summary table with multiple splitting variables
+
+Use the `ddply()` function to produce a summary table showing how the proportion of high earners varies across all combinations of the following variables: `sex`, `race`, and `marital` (marital status).  In addition to showing the proportion of high earners, your table should also show the number of individuals in each bin.  Your table should have column names: `sex`, `race`, `marital`, `count` and `high.earn.rate`.  
+
+```{r question 4c}
+table_high.earn2 <- ddply(adult.data, .(sex, race, marital), summarise, 
+      count = length(education_num),
+      high.earn.rate = sum(high.income == 1) / length(education_num))
+table_high.earn2
+```
+
+##### (d) Nicer table output using `kable()`
+
+Use the `kable()` function from the `knitr` library to display the table from part **(c)** in nice formatting.  You should use the `digits` argument to ensure that the values in your table are being rounded to a reasonable number of decimal places.  
+
+```{r question 4d}
+kable_high.earn <- kable(table_high.earn2, format='html', digits=2)
+kable_high.earn
+```
+
+### Problem 5: Getting the right plot
+
+##### (a) A more complex bar chart.
+
+Using the table you created in 4(c), use ggplot graphics to construct a plot that looks like [the one at this link](http://www.andrew.cmu.edu/user/achoulde/94842/homework/target_fig.png)
+
+
+**Hint** You may find it useful to use the following layers: `facet_grid`, `coord_flip` (for horizontal bar charts), `theme` (rotating x axis text) and `guides` (removing fill legend). 
+
+```{r question 5a, fig.height = 4, fig.width = 8}
+plot_multi1 <- ggplot(data=table_high.earn2, aes(high.earn.rate, marital, fill=race)) + geom_histogram(stat= 'identity') + facet_grid(sex~race) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + guides(fill="none") + labs(x = "Proportion earning over $50K per year", y = "Marital status")
+plot_multi1
+```
+
+##### (b)  Hiding code with `echo` 
+
+Repeat part **(a)**, but this time set the `echo` argument of the code chunk in such a way that the code is not printed, but the plot is still displayed.
+
+```{r question 5b, echo=FALSE, fig.height = 4, fig.width = 8}
+plot_multi2 <- ggplot(data=table_high.earn2, aes(high.earn.rate, marital, fill=race)) + geom_histogram(stat= 'identity') + facet_grid(sex~race) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + guides(fill="none") + labs(x = "Proportion earning over $50K per year", y = "Marital status")
+plot_multi2
+```
+
+As usual, save your Rmd code, knit a complete html file and submit it on Canvas with a file name of `HW4_yourAndrewID.html`.

@@ -1,0 +1,186 @@
+---
+title: "Homework 5"
+author: "Yanyu Chen"
+date: 'Assigned: 2021/11/24'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: paper
+    highlight: tango
+---
+
+```{r load libraries, message = FALSE, echo = FALSE}
+library(tidyverse)
+library (MASS)
+library (faraway)
+library(caret)
+set.seed(824)
+```
+
+### This homework is due before the next class.  To complete this assignment, follow these steps:
+
+This homework is designed to simulate full data analysis on example data sets. There is set up for both a regression and classification problem. The first is to find the best predictors for estimating body density in a dataset called "density.csv". The vector body.density is the variable of interest in this data set.
+
+## Problem 1: Exploring the data
+
+### (1.1) Load the full `density.csv` data set for exploratory data analysis (EDA). Run the commands `str()` and `summary()` for the full data set. Build histograms for the age, weight, height and body.density vectors.  Finally, create (3) x-y scatter plots for age, weight, height versus body.density (or use pairs). Which of these (3) variables, if any, appear to be good indicators of body.density?
+
+```{r define the data set}
+density <- read.csv("D:/Heinz/R Analytics/HW5/density.csv", stringsAsFactors=TRUE, encoding = "UTF-8")
+colnames(density)[1] <- 'age'  
+```
+
+```{r build the histograms}
+str(density)
+summary(density)
+
+# Plot the histograms
+hist_age <- hist(density$age)
+hist_weight <- hist(density$weight)
+hist_height <- hist(density$height)
+hist_density <- hist(density$body.density)
+
+# Edit me to create the scatterplots
+scatter_age <- scatter.smooth(density$age, density$body.density)
+scatter_weight <- scatter.smooth(density$weight, density$body.density)
+scatter_height <- scatter.smooth(density$height, density$body.density)
+```
+
+### (1.2) Comment on the distribution of the data points.
+
+- fill in your comments about the histogram shapes here:
+  + the distribution for age is a bit positively skewed distributed.
+  + the distribution for weight is a bit negatively skewed distributed.
+  + the distribution for height is a bit negatively skewed distributed.
+  + the distribution for body.density is like a normal distribution.
+- of the three scatter plots, 'weight' seems to be correlated with body.density
+
+## Problem 2: Corrleations 
+
+### (2.1) Evaluate the correlations between the variables. Which factors (up to 3) appear to be most strongly correlated with body.density?
+
+```{r correlation}
+corr <- round(cor(density), 2)
+corr
+```
+
+- the factors most closely correlated with body.density are abdomen, chest, and hip. Their absolute correlation values are higher than 0.6.
+
+## Problem 3: t-tests and ANOVA
+
+### (3.1) Recall the R command to test two means is `t.test()`, and `aov()` is the ANOVA function to test more than 2 means. Use these commands to test the means between the two vectors in the following examples: (a) the vectors `sleep.group1` and `sleep.group2` as created in the code chunk, below, at the standard 95% confidence level, (b) run an ANOVA test on the `InsectSpray` built-in dataset by spray type - this may take a bit of research to find the correct syntax, and (c) run an ANOVA test on the small dataset `runner.csv` available on Canvas (generate a base-R boxplot, if you would like to visualize the dataset - not a necessary part of the assignment). 
+
+```{r create more datasets, echo=FALSE}
+sleep.group1 <- sleep$extra[sleep$group == 1]
+sleep.group2 <- sleep$extra[sleep$group == 2]
+```
+
+```{r buidl tests}
+# Edit me to run t-test (a)
+t.test(sleep.group1, sleep.group2, conf.level = 0.95)
+
+# Edit me to run ANOVA (b)
+summary(InsectSprays)
+x1 <- InsectSprays[which(InsectSprays$spray == 'A'),1]
+x2 <- InsectSprays[which(InsectSprays$spray == 'B'),1]
+x3 <- InsectSprays[which(InsectSprays$spray == 'C'),1]
+x4 <- InsectSprays[which(InsectSprays$spray == 'D'),1]
+x5 <- InsectSprays[which(InsectSprays$spray == 'E'),1]
+x6 <- InsectSprays[which(InsectSprays$spray == 'F'),1]
+
+insect_df <- data.frame(cbind(x1, x2, x3, x4, x5, x6))
+insect_to_anov <- stack(insect_df)
+anov <- aov(values ~ ind, data = insect_to_anov)
+summary(anov)
+
+# Edit me to run ANOVA (c)
+runner <- read.csv("D:/Heinz/R Analytics/HW5/runner.csv", stringsAsFactors=TRUE, encoding = "UTF-8")
+colnames(runner)[1] <- 'trial'
+
+x7 <- runner[which(runner$trial == 1),2]
+x8 <- runner[which(runner$trial == 2),2]
+x9 <- runner[which(runner$trial == 3),2]
+x10 <- runner[which(runner$trial == 4),2]
+
+runner_df <- data.frame(cbind(x7, x8, x9, x10))
+runner_to_anov <- stack(runner_df)
+anov2 <- aov(values ~ ind, data = runner_to_anov)
+summary(anov2)
+
+```
+
+### (3.2) Comment on the outputs for each of the tests.
+
+- fill in your comments about the statistical test results here:
+  + the t test for (a) showed that these is no significant difference between the mean valueof sleep.group1 and sleep.group2.
+  + the ANOVA test for (b) showed that there is(are) significant difference(s) between the mean counts of different sprays.
+  + the t test for (c) showed that these is no significant difference between the mean distance of different trials.
+
+## Problem 4: Linear models
+
+### (4.1) Build two linear models `lm()` for the built-in `trees` dataset, comparing Height to Volume and Girth to Volume (2 seperate models). Also, plot each of these datasets (base-R is fine) and overlay the linear models with a red line on each of the 2 plots. 
+
+```{r linear models}
+# Build 2 linear models, evaluate the model results, and plot the datasets and superimpose the model line
+
+# Volume ~ Height
+trees_lm1 <- lm(Volume ~ Height, data = trees)
+summary(trees_lm1)
+
+plot(x=trees$Height, y=trees$Volume, xlab='Height', ylab='Volume', main='Regression: Volume ~ Height') + abline(trees_lm1, col='red')
+
+# Volume ~ Girth
+trees_lm2 <- lm(Volume ~ Girth, data = trees)
+summary(trees_lm2)
+
+plot(x=trees$Girth, y=trees$Volume, xlab='Girth', ylab='Volume', main='Regression: Volume ~ Girth') + abline(trees_lm2, col='red')
+```
+### (4.2) Comment on the difference between the two. Does one of the two variables predict Volume better than the other and why? You may have multiple reasons to support your conclusions.
+
+From the summaries for both regressions, we can see that the absolute t-statistic for the second regression is bigger, implying that the coefficient is more significant. Also, the R-square for the second regression 'Volume ~ Girth' is about 0.93, which is much more greater than R-square 0.34 of the first regression.
+
+## Problem 5: Setting up a classification problem
+
+### A rather "famous" dataset about diabetes in a population of Pima Indian women is available in a number of R libraries. *Please be sure to collect your dataset from the `faraway` package* (you may need to install this package if you do not have a copy already). Load the dataset `faraway::pima` as an object in your code below. Determine if any NAs exist in the dataset, and do some basic EDA (exploratory data analysis) on the variables. You do not need to run any classification models on this dataset, but you should note how the $test vector is either 0 or 1, indicating the absence or presence of the disease. Be sure to set this vactor as a factor. This problem is intentionally open-ended and an opportunity you you to use some thought and creativity in evaluating the dataset and preparing the target variable.
+
+```{r classification problem set-up}
+# Overview the dataset
+summary(pima)
+
+# Convert the target variable into factor
+pima$test <- as.factor(pima$test)
+
+# Check nulls
+sum(is.na(pima))
+
+# EDA
+str(pima)
+head(pima)
+
+ggplot(pima, aes(x = test)) + geom_bar() + labs(x='test') + ggtitle('Distribution of test')
+ggplot(pima, aes(x = age)) + geom_bar() + labs(x='age') + ggtitle('Distribution of age')
+ggplot(pima, aes(x = bmi)) + geom_bar() + labs(x='bmi') + ggtitle('Distribution of bmi') # Here we find there are zeros in bmi column
+
+# These three boxplots are some examples, we can do it with any other variables to check the outliers difference between groups.
+ggplot(pima, aes(x=test, y=pregnant)) + geom_boxplot() + ggtitle('Boxplot for pregnant in test groups')
+ggplot(pima, aes(x=test, y=glucose)) + geom_boxplot() + ggtitle('Boxplot for glucose in test groups')
+ggplot(pima, aes(x=test, y=diastolic)) + geom_boxplot() + ggtitle('Boxplot for diastolic in test groups')
+
+
+# We can use the KNN to make classification of test.
+pima_backup <- pima # Make a backup of the original dataset
+pima <- subset(pima, bmi!=0) # Drop some invalid rows since BMI is not possible to be 0. We may need to make some similar adjustments if there are other invalid values.
+
+inTrain <- createDataPartition(y = pima$test, p = 0.7, list = FALSE)
+training <- pima[inTrain, ]
+testing <- pima[-inTrain, ]
+
+count(training)
+count(testing)
+
+# We don't need to run any classification models so it stops here.
+
+```
+
+### As usual, please complete, knit and save your homework in html, be sure your name is in the YAML header, and submit on Canvas before next week's class.
