@@ -1,0 +1,380 @@
+---
+title: "Final Project"
+author: "Yanyu Chen (ID: yanyuc)"
+date: 'Completed: 2021/12/10'
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: paper
+    highlight: tango
+---
+
+```{r load libraries, message = FALSE, warning=FALSE}
+library(tidyverse)
+library(data.table)
+library(modelsummary)
+library(ggplot2)
+library(ggpubr)
+library(plotly)
+library(reshape2)
+set.seed(1)
+```
+<font size="3" color="black">
+
+## The differences between the ethnic majority and minorities in China
+
+On the Chinese internet, there are always some discussions about the living conditions of the Chinese ethnic minorities.
+
+Some people think the ethnic minorities generally have better living conditions than the majority 'Han' race because they enjoy a series of special policies that benefit them a lot. However, some people argue that China has those policies because the ethnic minorities have worse living conditions for historical and geographical reasons, and these policies are made to help narrow the gap.
+
+I'm interested in which side is closer to the truth in the real society in China. And I want to know if some of the special policies for ethnic minorities are necessary. 
+
+In my opinion, the ethnic minorities in China are not likely to have better living condition by all means. My major was Arabic, so I have a lot of chances to communicate with the ethnic minorities that believed in Islam in China. Most of them live in areas with low economic growth; they enjoy fewer healthcare resources; they may study with difficulty because their first languages are not Chinese...
+
+So, I used the data named 'Chinese General Social Survey, CGSS' from the Renmin University of China published in 2017. I extracted some variables that can measure the living condition of a person in China. Also, I selected some variables that may have significant impacts on the living condition.
+
+(Source of the dataset, in Chinese: http://cnsda.ruc.edu.cn/index.php?r=projects/view&id=94525591
+I'm sorry but there is no English version for this website nor the dataset. I'll upload the original dataset (dta format) and extracted dataset (csv format) with this project.)
+
+
+The variables that I extracted are listed below.
+
+
+```{r define the data set}
+people <- read.csv("D:/Heinz/R Analytics/CGSS/CGSS2.csv", stringsAsFactors=TRUE)
+str(people)
+dim(people)
+```
+From the structure we can know that there are 25 variables with 12582 rows. They are all integers or numbers. Some categorical variables such as race will be convert to 'factors' later to make graphs.
+
+The descriptions for the variables:
+
+1. id: Unique identifier for each person in this dataset
+
+2. Gender: 0 if this person is male, 1 if this person is female (There are only these two options in the original dataset)
+
+3. religion: 1 if this person does not believe in any religion, 0 if this person does believes in any religion(s)
+
+4. educ: Total education this person received. The measurement is a kind of index/score: higher value is for higher education and lower value is for lower education
+
+5. income: The total annual income for this person in 2016, measured in RMB
+
+6. space_houisng: The space of this person's residence, measured in square meter
+
+7. own_housing: 0 if this person does not own any houses, 1 if this person owns any house(s)
+
+8. height: This person's height, measured in centimeters
+
+9. health: The self-evaluated health index, integers from 1 to 5, 1 is 'Very Unhealthy', 5 is 'Very Healthy'
+
+10. use_internet: The self-evaluated use of internet, integers from 1 to 5, 1 is 'Never', 5 is 'Always'
+
+11. fairness: The self-evaluated fairness index of current Chinese society, from 1 to 5, 1 is 'Not fair at all', 5 is 'Completely fair'
+
+12. opinion_homosex: This person's opinion about homosexual love, integers from 1 to 5, 1 is 'It's not right at all', 5 is 'It's completely right'
+
+13. manda_speak: The person's ability in speaking Chinese mandarin, integers from 1 to 5, 1 is 'Can't speak mandarin at all', 5 is 'Speaks mandarin very fluently'
+
+14. educ_fath: Total education this person's father received. Other description is similar to 4.educ
+
+15. educ_moth: Total education this person's mother received. Other description is similar to 4.educ
+
+16. food_exp: Total expenditure for food in 2016, measured in RMB
+
+17. education_exp: Total expenditure for education in 2016, measured in RMB
+
+18. health_exp: Total expenditure for healthcare in 2016, measured in RMB
+
+19. educ_parent: The average education this person's parents received. (Formula: (educ_fath + educ_moth) / 2)
+
+20. married: 0 if this person is not married, 1 if this person is married
+
+21. race: 0 if this person belongs to the majority race 'Han', 1 if not
+
+22. age: This person's age, measured in years
+
+23. weight: This person's weight, measured in kilograms
+
+24. party: 0 if this person is not a Chinese Communist Party member, 1 if this person is the party member
+
+25. happiness: The self-evaluated happiness score, integers from 1 to 5, 1 is 'not happy at all', 5 is 'completely happy'
+
+
+## Data Cleaning and Overview
+
+```{r check the nulls}
+# Have a general view of the data and check the nulls
+summary(people)
+sum(is.na(people))
+```
+Most of the nulls are from the education_exp, health_exp, and food_exp columns. In this case, there are too many nulls so we have to drop these three columns.
+
+
+```{r drop some columns}
+# Referenced from https://stackoverflow.com/questions/34617883/how-to-remove-multiple-columns-in-r-dataframe/54348366
+drop <- c("food_exp","health_exp", "education_exp")
+people <- people[,!(names(people) %in% drop)]
+summary(people)
+```
+Now there's no null in this data
+
+## Exploratory Data Analysis
+
+### 1. General statistical information about the data (Source: https://vincentarelbundock.github.io/modelsummary/articles/datasummary.html)
+
+```{r basic statistics}
+
+datasummary_skim(people) # A general charts to see some statistic results of the data
+```
+The charts above have much useful information and it's more visualized.
+
+From this chart, we can see how these features spread out from the standard deviation and small histograms on the right. 
+
+The standard deviation for income is very huge (227283), and the mean value (38926) is very different from its median value, meaning that it's kind of right-skewed distributed.
+
+Only very few people believe in any religion (the value is 1 if this person does not believe in any religion) because the mean value is 0.9, which is very close to 1. The mini histogram on the right is showing the same thing.
+
+
+### 2. Grouping the data by race
+
+After having a general view of the data set, we can take a look at the variables in the groups that we are interested in. 
+
+In this case, the grouping variable will be 'race' because this is what I'm interested in.
+
+Data summary for the majority:
+
+```{r basic statistics for different groups - majority}
+people_majo <- people[people$race == 0,] # Data for ethnic majority
+people_mino <- people[people$race == 1,] # Data for ethnic minorities
+
+datasummary_skim(people_majo) # Same method for ethnic majority data
+```
+
+Data summary for the minorities:
+
+```{r basic statistics for different groups - minority}
+datasummary_skim(people_mino) # Same method for ethnic minorities data
+```
+
+First of all, the sample size of these two groups is not that balanced. There are 11636 people in the majority group and only 946 people in the minority group. However, it is a fact that in the whole population of China, only about 8% are ethnic minorities. (reference: https://guides.lib.unc.edu/china_ethnic/statistics) 
+
+This 8% percentage is in line with what we see in these two charts: the 946 to 11636 ratio is very close to 8%. So, even though it seems that this data is not that balanced, the population percentage for majorities and minorities is correct, and we may still gain some insights from this data.
+
+The minorities have a higher percentage of people that believe in a religion. Maybe it's because most people who believe in Islamic and Buddhism are minorities in China. Or we can put it in another way, in fact, some people were classified to be minorities by the government because they believed in a certain religion. (There are many books and papers in China talking about this, I'm not listing them here)
+
+
+The selected variables that measure the living condition are 'income', 'educ', 'health', and 'happiness' because they can measure the economic, educational, physical, and mental condition of a person. Comparing these four variables will give us a well-rounded result.
+
+
+## Graphical Exploratory Data Analysis
+
+### 1. The spread of 4 measuremnts in races
+
+```{r boxplot, warning=FALSE}
+people_racefactor <- people # Copy the data and convert the 'race' to factors
+people_racefactor$race <- as.factor(people_racefactor$race)
+box_income <- ggplot(people_racefactor, aes(x=race, y=income, fill=race)) + geom_boxplot() + ylim(1, 100000) + ggtitle('Income boxplot')
+box_educ <- ggplot(people_racefactor, aes(x=race, y=educ, fill=race)) + geom_boxplot() + ggtitle('Education boxplot')
+box_health <- ggplot(people_racefactor, aes(x=race, y=health, fill=race)) + geom_boxplot() + ggtitle('Health boxplot')
+box_happiness <- ggplot(people_racefactor, aes(x=race, y=happiness, fill=race)) + geom_boxplot() + ggtitle('Happiness boxplot')
+
+# Referenced from https://stackoverflow.com/questions/65694397/add-main-title-multiple-plots-ggarange
+boxes <- ggarrange(box_income, box_educ, box_health, box_happiness, ncol = 2, nrow = 2)
+boxes
+```
+
+For the four measurements of living conditions, we get four results from the charts:
+
+1. There seems to be a big difference between the income of the majority and minorities.
+
+2. There seems to be no significant difference between the education of the majority and minorities.
+
+3. There seems to be a big difference between the health of the majority and minorities.
+
+4. There seems to be no significant difference between the happiness of the majority and minorities. And for this plot, it seems that most people have a happiness index equal to 4.
+
+### 2. Checking the distributions
+To make sure that the two groups are similarly distributed in their exogenous features (i.e. age), we can make some plots to specifically see the distribution
+
+```{r t-test distribution of age}
+# Source for this part: https://www.r-graph-gallery.com/135-stacked-density-graph.html
+age_distr <- ggplot(people_racefactor, aes(x=age, group=race, fill=race), scale= 2) + geom_density(adjust=1.5, alpha=.4) + ggtitle('Distribution of age among races') + ylab("Age density")
+age_distr
+```
+<br>
+It seems that the age among races is distributed similarly.
+
+```{r t-test distribution of gender}
+people_racefactor$gender <- as.factor(people_racefactor$gender) # Convert the gender to factors
+age_distr <- ggplot(people_racefactor, aes(x=race, fill=gender)) + geom_bar() + ggtitle('Distribution of gender among races') + ylab("Gender density")
+age_distr
+```
+<br>
+It seems that the gender among races is distributed similarly because they are all half-to-half.
+
+We can think that among the races, gender and age are distributed similarly. So we can think that the exogenous features are not different between these two groups.
+
+## Deeper Analysis
+
+### 1. Statistical comparing
+We have observed some potential differences between the races. However, some statistical methods are still needed to make what we saw more convincing.
+
+Because we only have two groups, we can just use t-test to see if the differences between those four measurement variables are statistically significant.
+
+Firstly, we can compare their income
+
+```{r t-test income}
+t.test(income~race, data = people)
+```
+Unlike what we infer in the graphing part, the income difference between the majority and minorities is not statistically significant because the t-statistic is only about 0.2. 
+
+However, it still needs to be tested later by statistical models like Linear Regressions.
+
+
+Now we do the same for the rest 3 variables.
+
+```{r t-test education, health, happiness}
+t.test(educ~race, data = people)
+t.test(health~race, data = people)
+t.test(happiness~race, data = people)
+```
+
+There are significant differences between the education and health of the majority and minorities. These two t-statistic are greater than 2 (4.47 and 2.60), meaning that the majority has on average received more education and has better health condition.
+
+For the happiness, the t-statistic is really low (0.068). So there's no difference between the happiness of the majority and minorities.
+
+### 2. Regressions
+
+Since we have discussed that the ethnic minorities are already enjoying some special policies for them, they may already benefit from it and have income and happiness similar to the majority. 
+
+However, this data does not contain anything related to the execution of those policies, we can make use of some more methods to control this as possible as we can. 
+
+So, to check if the ethnic identity has no significant effect on the income and happiness, we can make some regressions to control more variables to have some thoughts about the causal effect from the 'race' variable.
+
+
+
+#### Simple Linear Regression for income:
+
+Although the result for 2 variables simple linear regression should be similar to the t-test, we can still generate a linear regression model and observe its coefficients to give us some basic ideas.
+
+```{r t-test Simple linear regression}
+people_lm1 <- lm(income ~ race, data = people)
+summary(people_lm1)
+```
+
+The result above still tells us that minorities in China may have lower income but it's not statistically significant.
+
+
+
+#### Longer Linear Regression for income:
+
+Now we can try to add more variables.
+
+Before that, we need to check the correlation between the variables to reduce the effect of multicollinearity.
+
+```{r t-test Correlation Heatmap}
+# Source for this part: http://www.sthda.com/english/wiki/ggplot2-quick-correlation-matrix-heatmap-r-software-and-data-visualization
+people_x <- subset(people, select = -id)
+corr <- round(cor(people_x), 2)
+melted_corr <- melt(corr)
+heatmap <- ggplot(data = melted_corr, aes(x=Var1, y=Var2, fill=value)) + geom_tile() + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + ggtitle('Heatmap for variables')
+
+heatmap
+```
+
+From the heatmap, height and weight are very correlated to gender. This is within our expectation because the male has a higher average height and weight than female physically. Also, eudc_parent is very correlated to educ_fath and educ_moth because this variable was calculated by the average education of the father and mother.
+
+Age is tightly correlated to the use of the internet. This matches my 'stereotype' that elder people are more unlikely to accept new things.
+
+So, here we can drop height, weight, educ_fath, educ_moth, and use_internet. Also, in the regression for income, we don't include the other three measurement variables.
+
+```{r t-test Longer linear regression}
+people_lm2 <- lm(income ~ 
+                   gender 
+                 + religion 
+                 + educ 
+                 + space_housing 
+                 + own_housing 
+                 + fairness 
+                 + opinion_homosex 
+                 + manda_speak 
+                 + educ_parent 
+                 + married 
+                 + race 
+                 + age 
+                 + party,
+                 data = people)
+summary(people_lm2)
+```
+
+After we control some variables, the effect of race on income is still not statistically significant. Now it's more likely that race has no causal effect on income. 
+
+But there's still one more possibility. That is the race may not affect the income directly, but it will affect the income by affecting the education because the coefficient for education is statistically significant here.
+
+
+Now, let's try running another regression to see the effect of race on education.
+
+```{r t-test Another linear regression}
+people_lm2 <- lm(educ ~ 
+                   gender 
+                 + religion 
+                 + space_housing 
+                 + own_housing 
+                 + fairness 
+                 + opinion_homosex 
+                 + manda_speak 
+                 + educ_parent 
+                 + married 
+                 + race 
+                 + age 
+                 + party,
+                 data = people)
+summary(people_lm2)
+```
+
+Now, race has a significant negative correlation with education. Since education can not decide one's ethnicity, it's very possible that Chinese minorities have less education, and this resulted in some differences in income.
+
+#### Longer Linear Regression for happiness:
+
+We can use the same method for the happiness.
+
+```{r t-test Hapiness linear regression}
+people_lm3 <- lm(happiness ~ 
+                   gender 
+                 + religion 
+                 + educ 
+                 + income 
+                 + space_housing 
+                 + own_housing 
+                 + fairness 
+                 + opinion_homosex 
+                 + manda_speak 
+                 + educ_parent 
+                 + married 
+                 + race 
+                 + age 
+                 + party,
+                 data = people)
+summary(people_lm3)
+```
+
+This time the effect of race on happiness is still not significant. The race probably has no significant correlation with happiness.
+
+## Conclusion
+
+Now, to answer the general question 'Is the living condition of Chinese ethnic majority and minorities different', we can conclude that there are some differences.
+
+For income, seemingly there is no significant gap between the majority and minorities. But from the regressions above, we now know that there is a difference between the education of the majority and minorities, which will significantly affect the income.
+
+For education, 'race' plays an important role and is negatively correlated with education.
+
+For health, the minorities generally have worse health conditions. Maybe this is because many minorities live in rural and distant areas so they have fewer healthcare resources.
+
+For happiness, there is no significant difference. However, considering that minorities have special policies that benefit them, their happiness score may be higher if everything else is controlled. So, maybe these policies somehow offset the difference in education and healthcare.
+
+Actually, in China, some of the special policies are already related to education and healthcare field. For example, in the Chinese College entrance examination, the minorities have some additional bonus grades in their final grades. So, at least we can say that these policies have their necessity because they help to improve the living condition of the minorities and narrow the gaps.
+
+Finally, this dataset was mentioned to be not that balanced in terms of the races. If we want more precise and convincing results, this dataset is preferably to have a bigger sample size and more variables for the ethnic minorities.
+
+</font>
